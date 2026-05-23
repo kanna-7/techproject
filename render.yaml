@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: techproject-reconciler
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false # Set this in Render Dashboard UI during setup
+      - key: TIMESTAMP_TOLERANCE_SECONDS
+        value: 300
+      - key: QUANTITY_TOLERANCE_PCT
+        value: 0.01
