@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crypto Reconciliation Engine Dashboard</title>
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Chart.js for data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- FontAwesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="glass-bg"></div>
+  <div class="app-container">
+    
+    <!-- Sidebar / Configuration -->
+    <aside class="config-sidebar">
+      <div class="logo-area">
+        <i class="fa-solid fa-scale-balanced logo-icon"></i>
+        <h2>ReconEngine</h2>
+      </div>
+      
+      <form id="reconcileForm" class="config-form">
+        <h3>Matching Configuration</h3>
+        
+        <div class="form-group">
+          <label for="userFilePath">
+            <i class="fa-solid fa-file-user"></i> User CSV Path
+          </label>
+          <input type="text" id="userFilePath" value="D:\Downloads\user_transactions.csv" required>
+        </div>
+
+        <div class="form-group">
+          <label for="exchangeFilePath">
+            <i class="fa-solid fa-file-invoice-dollar"></i> Exchange CSV Path
+          </label>
+          <input type="text" id="exchangeFilePath" value="D:\Downloads\exchange_transactions.csv" required>
+        </div>
+
+        <div class="form-group">
+          <div class="label-header">
+            <label for="timestampToleranceSeconds">Timestamp Window</label>
+            <span id="timestampVal">300s (5m)</span>
+          </div>
+          <input type="range" id="timestampToleranceSeconds" min="10" max="3600" step="10" value="300">
+          <small class="help-text">Max time difference between user and exchange transactions.</small>
+        </div>
+
+        <div class="form-group">
+          <div class="label-header">
+            <label for="quantityTolerancePct">Quantity Tolerance</label>
+            <span id="quantityVal">0.01%</span>
+          </div>
+          <input type="range" id="quantityTolerancePct" min="0.001" max="1" step="0.001" value="0.01">
+          <small class="help-text">Max allowable percentage difference in transaction size.</small>
+        </div>
+
+        <button type="submit" id="runBtn" class="btn btn-primary">
+          <i class="fa-solid fa-bolt"></i> Run Reconciliation
+        </button>
+      </form>
+      
+      <div class="footer">
+        <p>Crypto Reconciliation Engine v1.0</p>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <header class="main-header">
+        <div class="title-section">
+          <h1>Reconciliation Console</h1>
+          <p id="runStatus">Select parameters and trigger a run to analyze discrepancies.</p>
+        </div>
+        <div class="action-buttons">
+          <button id="downloadCSV" class="btn btn-secondary" disabled>
+            <i class="fa-solid fa-file-arrow-down"></i> Export Report (CSV)
+          </button>
+        </div>
+      </header>
+
+      <!-- Dashboard Stats Summary Cards -->
+      <section class="stats-section">
+        <div class="stat-card matched-card">
+          <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Matched</span>
+            <h2 id="countMatched">-</h2>
+          </div>
+        </div>
+
+        <div class="stat-card conflicting-card">
+          <div class="stat-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Conflicting</span>
+            <h2 id="countConflicting">-</h2>
+          </div>
+        </div>
+
+        <div class="stat-card unmatched-user-card">
+          <div class="stat-icon"><i class="fa-solid fa-user-xmark"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Unmatched (User)</span>
+            <h2 id="countUnmatchedUser">-</h2>
+          </div>
+        </div>
+
+        <div class="stat-card unmatched-exchange-card">
+          <div class="stat-icon"><i class="fa-solid fa-building-columns"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Unmatched (Exchange)</span>
+            <h2 id="countUnmatchedExchange">-</h2>
+          </div>
+        </div>
+      </section>
+
+      <!-- Data Visualizations and Detailed Results -->
+      <div class="dashboard-grid">
+        
+        <!-- Chart Panel -->
+        <div class="panel chart-panel">
+          <h3>Reconciliation Breakdown</h3>
+          <div class="chart-container">
+            <canvas id="reconcileChart"></canvas>
+            <div id="chartPlaceholder" class="chart-placeholder">
+              <i class="fa-solid fa-chart-pie"></i>
+              <p>Run reconciliation to generate visualization</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ingestion Health Panel -->
+        <div class="panel health-panel">
+          <h3>Data Quality & Ingestion Log</h3>
+          <div class="health-metrics">
+            <div class="health-row">
+              <span>User Invalid Rows:</span>
+              <span id="invalidUserRows" class="badge bg-neutral">-</span>
+            </div>
+            <div class="health-row">
+              <span>Exchange Invalid Rows:</span>
+              <span id="invalidExchangeRows" class="badge bg-neutral">-</span>
+            </div>
+            <div class="health-row">
+              <span>Ingestion Status:</span>
+              <span id="ingestionStatus" class="badge bg-neutral">-</span>
+            </div>
+          </div>
+          <div id="validationLog" class="validation-log">
+            <p class="empty-log">Ingestion log will appear here after run completes.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transaction List Panel -->
+      <section class="panel table-panel">
+        <div class="panel-header">
+          <h3>Reconciliation Items</h3>
+          <div class="table-filters">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="Matched">Matched</button>
+            <button class="filter-btn" data-filter="Conflicting">Conflicting</button>
+            <button class="filter-btn" data-filter="Unmatched (User only)">User Only</button>
+            <button class="filter-btn" data-filter="Unmatched (Exchange only)">Exchange Only</button>
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Asset</th>
+                <th>User Tx Info</th>
+                <th>Exchange Tx Info</th>
+                <th>Discrepancy Explanation</th>
+              </tr>
+            </thead>
+            <tbody id="reportTableBody">
+              <tr>
+                <td colspan="5" class="empty-table">
+                  <i class="fa-solid fa-folder-open"></i>
+                  <p>No reconciliation records loaded. Trigger a run above.</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+  </div>
+</body>
+</html>
